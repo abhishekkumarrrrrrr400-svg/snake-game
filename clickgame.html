@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Snake Game - Open World</title>
+    <style>
+        body{
+            background:#222;
+            color:white;
+            text-align:center;
+            font-family:Arial;
+        }
+        canvas{
+            background:black;
+            border:none;   /* ❌ wall removed */
+            display:block;
+            margin:15px auto;
+        }
+        .info{
+            font-size:18px;
+        }
+        button{
+            padding:8px 16px;
+            font-size:16px;
+            cursor:pointer;
+        }
+    </style>
+</head>
+<body>
+
+<h2>🐍 Snake Game (No Wall Death)</h2>
+
+<div class="info">
+Score: <span id="score">0</span> |
+High Score: <span id="highScore">0</span>
+</div>
+
+<canvas id="game" width="400" height="400"></canvas>
+<div style="margin-top:10px;">
+    <button onclick="setSpeed(200)">🐢 Slow</button>
+    <button onclick="setSpeed(150)">🙂 Normal</button>
+    <button onclick="setSpeed(80)">⚡ Fast</button>
+</div>
+
+
+<button onclick="restartGame()">🔄 Restart</button>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+const box = 20;
+
+// ---------- GAME VARIABLES ----------
+let snake, food, direction;
+let score = 0;
+let game, gameInterval = 150;
+
+// ---------- HIGH SCORE ----------
+let highScore = localStorage.getItem("snakeHighScore") || 0;
+document.getElementById("highScore").innerHTML = highScore;
+
+function updateHighScore(){
+    if(score > highScore){
+        highScore = score;
+        localStorage.setItem("snakeHighScore", highScore);
+        document.getElementById("highScore").innerHTML = highScore;
+    }
+}
+
+// ---------- SOUND ----------
+function playSound(freq, dur){
+    const ac = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ac.createOscillator();
+    o.frequency.value = freq;
+    o.connect(ac.destination);
+    o.start();
+    setTimeout(()=>o.stop(), dur);
+}
+
+// ---------- NEW SNAKE ----------
+function newSnake(){
+    snake = [{x:200, y:200}];
+    direction = "RIGHT";
+}
+
+// ---------- FOOD ----------
+function randomFood(){
+    return {
+        x: Math.floor(Math.random()*19)*box,
+        y: Math.floor(Math.random()*19)*box
+    };
+}
+
+// ---------- START GAME ----------
+function startGame(){
+    score = 0;
+    gameInterval = 150;
+
+    newSnake();
+    food = randomFood();
+
+    document.getElementById("score").innerHTML = score;
+
+    clearInterval(game);
+    game = setInterval(draw, gameInterval);
+}
+
+// ---------- CONTROLS ----------
+document.addEventListener("keydown", e=>{
+    if(e.keyCode==37 && direction!="RIGHT") direction="LEFT";
+    if(e.keyCode==38 && direction!="DOWN") direction="UP";
+    if(e.keyCode==39 && direction!="LEFT") direction="RIGHT";
+    if(e.keyCode==40 && direction!="UP") direction="DOWN";
+});
+
+// ---------- MAIN DRAW ----------
+function draw(){
+    ctx.clearRect(0,0,400,400);
+
+    // draw snake
+    snake.forEach((s,i)=>{
+        ctx.fillStyle = i==0 ? "lime" : "green";
+        ctx.fillRect(s.x, s.y, box, box);
+    });
+
+    // draw food
+    ctx.fillStyle = "red";
+    ctx.fillRect(food.x, food.y, box, box);
+
+    let headX = snake[0].x;
+    let headY = snake[0].y;
+
+    if(direction=="LEFT") headX -= box;
+    if(direction=="RIGHT") headX += box;
+    if(direction=="UP") headY -= box;
+    if(direction=="DOWN") headY += box;
+
+    // 🌍 OPEN WORLD (WALL WRAP)
+    if(headX < 0) headX = 380;
+    if(headX >= 400) headX = 0;
+    if(headY < 0) headY = 380;
+    if(headY >= 400) headY = 0;
+
+    // 🍎 eat food
+    if(headX == food.x && headY == food.y){
+        score++;
+        document.getElementById("score").innerHTML = score;
+        playSound(600,100);
+        updateHighScore();
+        food = randomFood();
+    } else {
+        snake.pop();
+    }
+
+    let newHead = {x:headX, y:headY};
+
+    // 💀 ONLY SELF COLLISION = DEATH
+    if(snake.some(p => p.x === newHead.x && p.y === newHead.y)){
+        playSound(200,300);
+        alert("💀 Game Over!");
+        clearInterval(game);
+        return;
+    }
+
+    snake.unshift(newHead);
+}
+function setSpeed(speed){
+    gameInterval = speed;
+    clearInterval(game);
+    game = setInterval(draw, gameInterval);
+}
+
+
+// ---------- RESTART ----------
+function restartGame(){
+    startGame();
+}
+
+startGame();
+</script>
+
+</body>
+</html>
